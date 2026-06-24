@@ -1,0 +1,907 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Bluemax — precios vs competencia</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      background: #ffffff;
+      color: #1C1C1A;
+      font-size: 13px;
+      line-height: 1.5;
+    }
+
+    /* HEADER */
+    .header {
+      padding: 16px 20px 12px;
+      border-bottom: 0.5px solid #E0DED8;
+      background: #fff;
+    }
+    .header-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+    .header h1 {
+      font-size: 16px;
+      font-weight: 600;
+      color: #1C1C1A;
+    }
+    .period-badge {
+      background: #F5F5F3;
+      border: 0.5px solid #E0DED8;
+      border-radius: 6px;
+      padding: 2px 8px;
+      font-size: 11px;
+      font-weight: 500;
+      color: #6B6B69;
+    }
+    .header-sub {
+      margin-top: 4px;
+      font-size: 11px;
+      color: #6B6B69;
+    }
+
+    /* UPLOAD BAR */
+    .upload-bar {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 20px;
+      background: #F5F5F3;
+      border-bottom: 0.5px solid #E0DED8;
+      flex-wrap: wrap;
+    }
+    .btn {
+      background: #1C1C1A;
+      color: #fff;
+      border: none;
+      border-radius: 6px;
+      padding: 6px 12px;
+      font-size: 12px;
+      cursor: pointer;
+      font-family: inherit;
+      transition: background 0.15s;
+    }
+    .btn:hover { background: #333; }
+    .upload-info {
+      font-size: 11px;
+      color: #6B6B69;
+    }
+
+    /* MAIN */
+    .main {
+      padding: 16px 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    /* SECTION LABEL */
+    .section-label {
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      color: #6B6B69;
+      margin-bottom: 8px;
+      font-weight: 500;
+    }
+
+    /* FILTERS */
+    .filters-row {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      align-items: flex-end;
+    }
+    .filter-group {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .filter-group label {
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      color: #6B6B69;
+      font-weight: 500;
+    }
+    .filter-group select {
+      border: 0.5px solid #E0DED8;
+      border-radius: 6px;
+      padding: 6px 10px;
+      font-size: 12px;
+      font-family: inherit;
+      background: #fff;
+      color: #1C1C1A;
+      min-width: 150px;
+      cursor: pointer;
+      outline: none;
+    }
+    .filter-group select:focus {
+      border-color: #1C1C1A;
+    }
+
+    /* BRAND PILLS */
+    .pills-row {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 5px 10px;
+      border-radius: 20px;
+      border: 1.5px solid transparent;
+      font-size: 11px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.15s;
+      user-select: none;
+    }
+    .pill.active { opacity: 1; filter: none; }
+    .pill.inactive { opacity: 0.35; filter: grayscale(80%); }
+    .pill-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+
+    /* KPI GRID */
+    .kpi-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+      gap: 10px;
+    }
+    .kpi-card {
+      background: #F5F5F3;
+      border: 0.5px solid #E0DED8;
+      border-radius: 8px;
+      padding: 12px 14px;
+    }
+    .kpi-label {
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      color: #6B6B69;
+      margin-bottom: 6px;
+    }
+    .kpi-value {
+      font-size: 20px;
+      font-weight: 500;
+      color: #1C1C1A;
+      line-height: 1.2;
+    }
+    .kpi-value.positive { color: #1D9E75; }
+    .kpi-value.negative { color: #D94F4F; }
+    .kpi-suffix {
+      font-size: 12px;
+      font-weight: 400;
+      color: #6B6B69;
+    }
+
+    /* CHARTS GRID */
+    .charts-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 12px;
+    }
+    .chart-card {
+      background: #F5F5F3;
+      border: 0.5px solid #E0DED8;
+      border-radius: 12px;
+      padding: 14px;
+    }
+    .chart-title {
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      color: #6B6B69;
+      margin-bottom: 8px;
+    }
+    .chart-wrap {
+      height: 210px;
+      position: relative;
+    }
+    .chart-legend {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-bottom: 6px;
+    }
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 10px;
+      color: #6B6B69;
+    }
+    .legend-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+    .doughnut-sub {
+      text-align: center;
+      font-size: 10px;
+      color: #6B6B69;
+      margin-top: 6px;
+    }
+
+    /* TABLE */
+    .table-wrap {
+      overflow-x: auto;
+      border: 0.5px solid #E0DED8;
+      border-radius: 8px;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 12px;
+    }
+    thead th {
+      background: #F5F5F3;
+      padding: 8px 10px;
+      text-align: left;
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      color: #6B6B69;
+      font-weight: 500;
+      white-space: nowrap;
+      border-bottom: 0.5px solid #E0DED8;
+    }
+    tbody tr {
+      border-bottom: 0.5px solid #E0DED8;
+    }
+    tbody tr:last-child { border-bottom: none; }
+    tbody tr:hover { background: #FAFAF9; }
+    tbody td {
+      padding: 7px 10px;
+      white-space: nowrap;
+      color: #1C1C1A;
+    }
+    .chip {
+      display: inline-block;
+      padding: 2px 7px;
+      border-radius: 4px;
+      font-size: 11px;
+      font-weight: 500;
+    }
+    .chip-green { background: #D1FAE5; color: #065F46; }
+    .chip-red   { background: #FEE2E2; color: #991B1B; }
+    .chip-gray  { background: #F5F5F3; color: #6B6B69; }
+    .no-data {
+      text-align: center;
+      color: #6B6B69;
+      font-size: 12px;
+      padding: 24px;
+    }
+
+    /* RESPONSIVE */
+    @media (max-width: 540px) {
+      .charts-grid { grid-template-columns: 1fr; }
+      .kpi-grid { grid-template-columns: repeat(2, 1fr); }
+    }
+  </style>
+</head>
+<body>
+
+<!-- HEADER -->
+<div class="header">
+  <div class="header-row">
+    <h1>Bluemax — precios vs competencia</h1>
+    <span class="period-badge" id="periodBadge">—</span>
+  </div>
+  <div class="header-sub">Precio tótem c/IVA ($/L) · levantamiento Snuuper · Total mercado: 109 estaciones</div>
+</div>
+
+<!-- UPLOAD BAR -->
+<div class="upload-bar">
+  <button class="btn" onclick="document.getElementById('fileInput').click()">Cargar Excel</button>
+  <input type="file" id="fileInput" accept=".xlsx,.xls" style="display:none" onchange="handleFile(event)">
+  <span class="upload-info" id="uploadInfo">BD embebida — 96 registros</span>
+</div>
+
+<!-- MAIN CONTENT -->
+<div class="main">
+
+  <!-- Filters -->
+  <div>
+    <div class="section-label">Filtros</div>
+    <div class="filters-row">
+      <div class="filter-group">
+        <label>Zona</label>
+        <select id="selZona" onchange="onZonaChange()">
+          <option value="">Todas</option>
+        </select>
+      </div>
+      <div class="filter-group">
+        <label>Región</label>
+        <select id="selRegion" onchange="onRegionChange()">
+          <option value="">Todas</option>
+        </select>
+      </div>
+      <div class="filter-group">
+        <label>EDS</label>
+        <select id="selEDS" onchange="render()">
+          <option value="">Todas</option>
+        </select>
+      </div>
+    </div>
+  </div>
+
+  <!-- Brand pills -->
+  <div>
+    <div class="section-label">Marcas</div>
+    <div class="pills-row" id="pillsRow"></div>
+  </div>
+
+  <!-- KPIs -->
+  <div>
+    <div class="section-label">Indicadores</div>
+    <div class="kpi-grid" id="kpiGrid"></div>
+  </div>
+
+  <!-- Charts -->
+  <div>
+    <div class="section-label">Gráficos</div>
+    <div class="charts-grid">
+
+      <!-- Chart 1: Precio por región -->
+      <div class="chart-card">
+        <div class="chart-title">Precio promedio por región</div>
+        <div class="chart-legend" id="legendChart1"></div>
+        <div class="chart-wrap"><canvas id="chart1"></canvas></div>
+      </div>
+
+      <!-- Chart 2: PPMM doughnut -->
+      <div class="chart-card">
+        <div class="chart-title">PPMM — participación de mercado</div>
+        <div class="chart-wrap"><canvas id="chart2"></canvas></div>
+        <div class="chart-legend" id="legendChart2" style="margin-top:8px"></div>
+        <div class="doughnut-sub" id="doughnutSub">Total mercado: 109</div>
+      </div>
+
+      <!-- Chart 3: Diferencial Copec vs competencia -->
+      <div class="chart-card" id="card3" style="display:none">
+        <div class="chart-title">Diferencial Copec vs competencia ($/L)</div>
+        <div class="chart-wrap"><canvas id="chart3"></canvas></div>
+      </div>
+
+      <!-- Chart 4: Precio por zona -->
+      <div class="chart-card">
+        <div class="chart-title">Precio promedio por zona</div>
+        <div class="chart-legend" id="legendChart4"></div>
+        <div class="chart-wrap"><canvas id="chart4"></canvas></div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Detail table -->
+  <div>
+    <div class="section-label">Detalle por EDS</div>
+    <div class="table-wrap">
+      <table>
+        <thead id="tableHead"></thead>
+        <tbody id="tableBody"></tbody>
+      </table>
+    </div>
+  </div>
+
+</div>
+
+<script>
+// ===== CONSTANTS =====
+const TOTAL_MERCADO = 109;
+
+const BRAND_COLORS = {
+  'COPEC':        '#378ADD',
+  'Shell':        '#F59E0B',
+  'Aramco':       '#1D9E75',
+  'Adquim':       '#888780',
+  'Punto blanco': '#B4B2A9'
+};
+
+const MONTHS = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+
+// ===== BD_RAW =====
+const BD_RAW = [{"zona":"Norte","region":"Tarapacá","regionN":1,"marca":"COPEC","comuna":"ALTO HOSPICIO","denominacion":"ALTO HOSPICIO","precio":786.0,"periodo":"202606"},{"zona":"Norte","region":"Arica y Parinacota","regionN":15,"marca":"COPEC","comuna":"ARICA","denominacion":"ARICA","precio":870.0,"periodo":"202606"},{"zona":"Norte","region":"Tarapacá","regionN":1,"marca":"COPEC","comuna":"POZO ALMONTE","denominacion":"POZO ALMONTE","precio":852.0,"periodo":"202606"},{"zona":"Norte","region":"Antofagasta","regionN":2,"marca":"COPEC","comuna":"ANTOFAGASTA","denominacion":"ANTOFAGASTA","precio":860.0,"periodo":"202606"},{"zona":"Norte","region":"Antofagasta","regionN":2,"marca":"COPEC","comuna":"CALAMA","denominacion":"CALAMA","precio":860.0,"periodo":"202606"},{"zona":"Norte","region":"Antofagasta","regionN":2,"marca":"COPEC","comuna":"LA NEGRA","denominacion":"LA NEGRA","precio":860.0,"periodo":"202606"},{"zona":"Norte","region":"Antofagasta","regionN":2,"marca":"COPEC","comuna":"AGUAS VERDES","denominacion":"AGUAS VERDES","precio":950.0,"periodo":"202606"},{"zona":"Norte","region":"Antofagasta","regionN":2,"marca":"COPEC","comuna":"COPEC SG","denominacion":"COPEC SG","precio":860.0,"periodo":"202606"},{"zona":"Norte","region":"Antofagasta","regionN":2,"marca":"COPEC","comuna":"TOCOPILLA","denominacion":"TOCOPI LLA","precio":865.0,"periodo":"202606"},{"zona":"Norte","region":"Antofagasta","regionN":2,"marca":"COPEC","comuna":"COPEC SG","denominacion":"COPEC SG","precio":860.0,"periodo":"202606"},{"zona":"Norte","region":"Antofagasta","regionN":2,"marca":"COPEC","comuna":"MEJILLONES","denominacion":"MEJILLONES","precio":865.0,"periodo":"202606"},{"zona":"Norte","region":"Atacama","regionN":3,"marca":"COPEC","comuna":"VALLENAR","denominacion":"VALLENAR","precio":845.0,"periodo":"202606"},{"zona":"Norte","region":"Atacama","regionN":3,"marca":"COPEC","comuna":"COPIAPÓ","denominacion":"COPIAPO","precio":885.0,"periodo":"202606"},{"zona":"Norte","region":"Atacama","regionN":3,"marca":"COPEC","comuna":"CHAÑARAL","denominacion":"CHANARAL","precio":867.0,"periodo":"202606"},{"zona":"Norte","region":"Atacama","regionN":3,"marca":"COPEC","comuna":"VALLENAR","denominacion":"VALLENAR","precio":779.0,"periodo":"202606"},{"zona":"Norte","region":"Coquimbo","regionN":4,"marca":"COPEC","comuna":"LA SERENA","denominacion":"LA SERENA","precio":798.0,"periodo":"202606"},{"zona":"Centro","region":"Valparaíso","regionN":5,"marca":"COPEC","comuna":"PLACILLA","denominacion":"PLACILLA","precio":779.0,"periodo":"202606"},{"zona":"Norte","region":"Coquimbo","regionN":4,"marca":"COPEC","comuna":"LOS VILOS","denominacion":"LOS VILOS","precio":817.0,"periodo":"202606"},{"zona":"Norte","region":"Coquimbo","regionN":4,"marca":"COPEC","comuna":"LOS VILOS","denominacion":"LOS VILOS","precio":817.0,"periodo":"202606"},{"zona":"Norte","region":"Coquimbo","regionN":4,"marca":"COPEC","comuna":"LOS VILOS","denominacion":"LOS VILOS","precio":817.0,"periodo":"202606"},{"zona":"Norte","region":"Coquimbo","regionN":4,"marca":"COPEC","comuna":"COQUIMBO","denominacion":"COQUIMBO","precio":798.0,"periodo":"202606"},{"zona":"Centro","region":"Valparaíso","regionN":5,"marca":"COPEC","comuna":"LLAILLAY","denominacion":"LLAY LLAY","precio":779.0,"periodo":"202606"},{"zona":"Norte","region":"Coquimbo","regionN":4,"marca":"COPEC","comuna":"LA SERENA","denominacion":"LA SERENA","precio":798.0,"periodo":"202606"},{"zona":"Centro","region":"Valparaíso","regionN":5,"marca":"COPEC","comuna":"TABOLANGO","denominacion":"TABOLANGO","precio":798.0,"periodo":"202606"},{"zona":"Centro","region":"Valparaíso","regionN":5,"marca":"COPEC","comuna":"SAN ANTONIO","denominacion":"SAN ANTONIO","precio":803.0,"periodo":"202606"},{"zona":"Centro","region":"Ñuble","regionN":16,"marca":"COPEC","comuna":"SAN CARLOS","denominacion":"SAN CARLOS CARRETERA","precio":780.0,"periodo":"202606"},{"zona":"Centro","region":"Maule","regionN":7,"marca":"COPEC","comuna":"PARRAL","denominacion":"PARRAL CARRETERA","precio":780.0,"periodo":"202606"},{"zona":"Sur","region":"Biobío","regionN":8,"marca":"COPEC","comuna":"CONCEPCIÓN","denominacion":"CONCEPCION","precio":805.0,"periodo":"202606"},{"zona":"Centro","region":"Ñuble","regionN":16,"marca":"COPEC","comuna":"CHILLÁN","denominacion":"CHILLAN CARRETERA","precio":780.0,"periodo":"202606"},{"zona":"Sur","region":"Araucanía","regionN":9,"marca":"COPEC","comuna":"FREIRE","denominacion":"FREIRE","precio":816.0,"periodo":"202606"},{"zona":"Sur","region":"Araucanía","regionN":9,"marca":"COPEC","comuna":"LONCOCHE","denominacion":"LONCOCHE","precio":840.0,"periodo":"202606"},{"zona":"Sur","region":"Biobío","regionN":8,"marca":"COPEC","comuna":"LOS ÁNGELES","denominacion":"LOS ANGELES 2","precio":805.0,"periodo":"202606"},{"zona":"Sur","region":"Araucanía","regionN":9,"marca":"COPEC","comuna":"LAUTARO","denominacion":"LAUTARO","precio":798.0,"periodo":"202606"},{"zona":"Sur","region":"Biobío","regionN":8,"marca":"COPEC","comuna":"LOS ÁNGELES","denominacion":"LOS ANGELES 2","precio":805.0,"periodo":"202606"},{"zona":"Sur","region":"Biobío","regionN":8,"marca":"COPEC","comuna":"PENCO","denominacion":"PENCO","precio":815.0,"periodo":"202606"},{"zona":"Sur","region":"Araucanía","regionN":9,"marca":"COPEC","comuna":"VICTORIA","denominacion":"VICTORIA CARRETERA","precio":839.0,"periodo":"202606"},{"zona":"Centro","region":"Ñuble","regionN":16,"marca":"COPEC","comuna":"CHILLÁN","denominacion":"CHILLAN CARRETERA","precio":780.0,"periodo":"202606"},{"zona":"Sur","region":"Biobío","regionN":8,"marca":"COPEC","comuna":"LOMAS COLORADAS","denominacion":"LOMAS COLORADAS","precio":805.0,"periodo":"202606"},{"zona":"Sur","region":"Biobío","regionN":8,"marca":"COPEC","comuna":"CABRERO","denominacion":"CABRERO","precio":823.0,"periodo":"202606"},{"zona":"Sur","region":"Biobío","regionN":8,"marca":"COPEC","comuna":"ARAUCO","denominacion":"ARAUCO","precio":804.0,"periodo":"202606"},{"zona":"Sur","region":"Araucanía","regionN":9,"marca":"COPEC","comuna":"RENAICO","denominacion":"RENAICO","precio":805.0,"periodo":"202606"},{"zona":"Sur","region":"Los Ríos","regionN":14,"marca":"COPEC","comuna":"SAN JOSÉ DE LA MARIQUINA","denominacion":"SN.J.DE LA MARI","precio":840.0,"periodo":"202606"},{"zona":"Sur","region":"Los Lagos","regionN":10,"marca":"COPEC","comuna":"PUERTO VARAS","denominacion":"PTO VARAS","precio":870.0,"periodo":"202606"},{"zona":"Sur","region":"Los Lagos","regionN":10,"marca":"COPEC","comuna":"TRAFÚN","denominacion":"TRAFUN","precio":870.0,"periodo":"202606"},{"zona":"Sur","region":"Los Lagos","regionN":10,"marca":"COPEC","comuna":"PUERTO MONTT","denominacion":"PTO MONTT","precio":870.0,"periodo":"202606"},{"zona":"Sur","region":"Los Lagos","regionN":10,"marca":"COPEC","comuna":"TRAFÚN","denominacion":"TRAFUN","precio":870.0,"periodo":"202606"},{"zona":"Sur","region":"Los Lagos","regionN":10,"marca":"COPEC","comuna":"OSORNO","denominacion":"OSORNO","precio":846.0,"periodo":"202606"},{"zona":"Sur","region":"Los Lagos","regionN":10,"marca":"COPEC","comuna":"PARGUA","denominacion":"PARGUA","precio":870.0,"periodo":"202606"},{"zona":"Sur","region":"Magallanes","regionN":12,"marca":"COPEC","comuna":"PUNTA ARENAS","denominacion":"PTA ARENAS","precio":1301.0,"periodo":"202606"},{"zona":"Centro","region":"Maule","regionN":7,"marca":"COPEC","comuna":"SAN RAFAEL","denominacion":"SAN RAFAEL","precio":780.0,"periodo":"202606"},{"zona":"Centro","region":"Maule","regionN":7,"marca":"COPEC","comuna":"MAULE","denominacion":"MAULE","precio":780.0,"periodo":"202606"},{"zona":"Centro","region":"Metropolitana","regionN":13,"marca":"COPEC","comuna":"RUTA 78","denominacion":"RUTA 78","precio":789.0,"periodo":"202606"},{"zona":"Centro","region":"Metropolitana","regionN":13,"marca":"COPEC","comuna":"RUTA 78","denominacion":"RUTA 78","precio":789.0,"periodo":"202606"},{"zona":"Centro","region":"O'Higgins","regionN":6,"marca":"COPEC","comuna":"SAN FERNANDO","denominacion":"SAN FERNANDO","precio":757.0,"periodo":"202606"},{"zona":"Centro","region":"Metropolitana","regionN":13,"marca":"COPEC","comuna":"PUDAHUEL","denominacion":"PUDAHUEL","precio":794.0,"periodo":"202606"},{"zona":"Centro","region":"O'Higgins","regionN":6,"marca":"COPEC","comuna":"CHIMBARONGO","denominacion":"CHIMBARONGO","precio":780.0,"periodo":"202606"},{"zona":"Centro","region":"Maule","regionN":7,"marca":"COPEC","comuna":"SAN JAVIER","denominacion":"SAN JAVIER CARRETERA","precio":780.0,"periodo":"202606"},{"zona":"Centro","region":"Metropolitana","regionN":13,"marca":"COPEC","comuna":"CONCHALÍ - RENCA","denominacion":"CONCH RENCA","precio":667.0,"periodo":"202606"},{"zona":"Centro","region":"O'Higgins","regionN":6,"marca":"COPEC","comuna":"SAN FRANCISCO DE MOSTAZAL","denominacion":"SN FCO.MOSTAZAL","precio":777.0,"periodo":"202606"},{"zona":"Centro","region":"Metropolitana","regionN":13,"marca":"COPEC","comuna":"LAMPA","denominacion":"LAMPA CARRETERA","precio":794.0,"periodo":"202606"},{"zona":"Centro","region":"O'Higgins","regionN":6,"marca":"COPEC","comuna":"LOS LIRIOS","denominacion":"LOS LIRIOS","precio":795.0,"periodo":"202606"},{"zona":"Centro","region":"Maule","regionN":7,"marca":"COPEC","comuna":"ROMERAL","denominacion":"ROMERAL","precio":769.0,"periodo":"202606"},{"zona":"Centro","region":"Metropolitana","regionN":13,"marca":"COPEC","comuna":"SAN BERNARDO","denominacion":"SAN BERNARDO","precio":763.0,"periodo":"202606"},{"zona":"Centro","region":"Metropolitana","regionN":13,"marca":"COPEC","comuna":"MAIPÚ","denominacion":"MAIPU","precio":795.0,"periodo":"202606"},{"zona":"Centro","region":"Maule","regionN":7,"marca":"COPEC","comuna":"SAGRADA FAMILIA","denominacion":"SAGRADA FLIA.","precio":774.0,"periodo":"202606"},{"zona":"Centro","region":"Metropolitana","regionN":13,"marca":"COPEC","comuna":"SAN BERNARDO","denominacion":"SAN BERNARDO","precio":795.0,"periodo":"202606"},{"zona":"Centro","region":"Maule","regionN":7,"marca":"COPEC","comuna":"TENO","denominacion":"TENO","precio":762.0,"periodo":"202606"},{"zona":"Centro","region":"Maule","regionN":7,"marca":"COPEC","comuna":"CONSTITUCIÓN","denominacion":"CONSTITUCION","precio":780.0,"periodo":"202606"},{"zona":"Centro","region":"Maule","regionN":7,"marca":"COPEC","comuna":"PANGUILEMO","denominacion":"PANGUILLEMU","precio":780.0,"periodo":"202606"},{"zona":"Centro","region":"Valparaíso","regionN":5,"marca":"COPEC","comuna":"HIJUELAS","denominacion":"HIJUELAS","precio":779.0,"periodo":"202606"},{"zona":"Centro","region":"O'Higgins","regionN":6,"marca":"COPEC","comuna":"SAN FRANCISCO DE MOSTAZAL","denominacion":"SN FCO.MOSTAZAL","precio":777.0,"periodo":"202606"},{"zona":"Sur","region":"Araucanía","regionN":9,"marca":"Punto blanco","comuna":"TEMUCO","denominacion":"TEMUCO","precio":1170.0,"periodo":"202606"},{"zona":"Sur","region":"Araucanía","regionN":9,"marca":"Shell","comuna":"VICTORIA","denominacion":"VICTORIA","precio":822.0,"periodo":"202606"},{"zona":"Norte","region":"Arica y Parinacota","regionN":15,"marca":"Shell","comuna":"ARICA","denominacion":"ARICA","precio":900.0,"periodo":"202606"},{"zona":"Norte","region":"Atacama","regionN":3,"marca":"Shell","comuna":"COPIAPÓ","denominacion":"COPIAPÓ","precio":905.0,"periodo":"202606"},{"zona":"Sur","region":"Biobío","regionN":8,"marca":"Shell","comuna":"TALCAHUANO","denominacion":"TALCAHUANO","precio":835.0,"periodo":"202606"},{"zona":"Norte","region":"Coquimbo","regionN":4,"marca":"Shell","comuna":"OVALLE","denominacion":"OVALLE","precio":837.0,"periodo":"202606"},{"zona":"Sur","region":"Los Lagos","regionN":10,"marca":"Aramco","comuna":"PUERTO MONTT","denominacion":"PUERTO MONTT","precio":952.0,"periodo":"202606"},{"zona":"Sur","region":"Los Lagos","regionN":10,"marca":"Shell","comuna":"PUERTO VARAS","denominacion":"PUERTO VARAS","precio":900.0,"periodo":"202606"},{"zona":"Sur","region":"Los Ríos","regionN":14,"marca":"Adquim","comuna":"PAILLACO","denominacion":"PAILLACO","precio":855.0,"periodo":"202606"},{"zona":"Sur","region":"Los Ríos","regionN":14,"marca":"Shell","comuna":"SAN JOSÉ DE LA MARIQUINA","denominacion":"MARIQUINA","precio":830.0,"periodo":"202606"},{"zona":"Centro","region":"Maule","regionN":7,"marca":"Shell","comuna":"CURICÓ","denominacion":"CURICÓ","precio":799.0,"periodo":"202606"},{"zona":"Centro","region":"Maule","regionN":7,"marca":"Shell","comuna":"TALCA","denominacion":"TALCA","precio":699.0,"periodo":"202606"},{"zona":"Centro","region":"Maule","regionN":7,"marca":"Shell","comuna":"TALCA","denominacion":"TALCA","precio":810.0,"periodo":"202606"},{"zona":"Centro","region":"Metropolitana","regionN":13,"marca":"Shell","comuna":"PEDRO AGUIRRE CERDA","denominacion":"PEDRO AGUIRRE CERDA","precio":815.0,"periodo":"202606"},{"zona":"Centro","region":"Metropolitana","regionN":13,"marca":"Shell","comuna":"QUILICURA","denominacion":"QUILICURA","precio":812.5,"periodo":"202606"},{"zona":"Centro","region":"Metropolitana","regionN":13,"marca":"Shell","comuna":"SAN BERNARDO","denominacion":"SAN BERNARDO","precio":793.0,"periodo":"202606"},{"zona":"Centro","region":"Ñuble","regionN":16,"marca":"Aramco","comuna":"SAN CARLOS","denominacion":"SAN CARLOS","precio":862.0,"periodo":"202606"},{"zona":"Centro","region":"Ñuble","regionN":16,"marca":"Shell","comuna":"CHILLÁN VIEJO","denominacion":"CHILLÁN VIEJO","precio":810.0,"periodo":"202606"},{"zona":"Centro","region":"Ñuble","regionN":16,"marca":"Shell","comuna":"SAN CARLOS","denominacion":"SAN CARLOS","precio":719.0,"periodo":"202606"},{"zona":"Centro","region":"O'Higgins","regionN":6,"marca":"Shell","comuna":"SAN FRANCISCO DE MOSTAZAL","denominacion":"MOSTAZAL","precio":777.0,"periodo":"202606"},{"zona":"Centro","region":"Valparaíso","regionN":5,"marca":"Aramco","comuna":"PLACILLA","denominacion":"PLACILLA","precio":864.0,"periodo":"202606"},{"zona":"Centro","region":"Valparaíso","regionN":5,"marca":"Shell","comuna":"HIJUELAS","denominacion":"HIJUELAS","precio":719.0,"periodo":"202606"},{"zona":"Centro","region":"Valparaíso","regionN":5,"marca":"Shell","comuna":"NOGALES","denominacion":"NOGALES","precio":809.0,"periodo":"202606"},{"zona":"Centro","region":"Valparaíso","regionN":5,"marca":"Shell","comuna":"SAN ANTONIO","denominacion":"SAN ANTONIO","precio":833.0,"periodo":"202606"},{"zona":"Centro","region":"Valparaíso","regionN":5,"marca":"Shell","comuna":"PLACILLA","denominacion":"PLACILLA","precio":798.0,"periodo":"202606"}];
+
+// ===== STATE =====
+let data = [...BD_RAW];
+let activeBrands = new Set(Object.keys(BRAND_COLORS));
+let charts = { c1: null, c2: null, c3: null, c4: null };
+
+// ===== UTILS =====
+function parsePeriodo(p) {
+  if (!p || String(p).length < 6) return String(p);
+  const s = String(p);
+  const y = s.substring(0, 4);
+  const m = parseInt(s.substring(4, 6), 10);
+  if (m < 1 || m > 12) return s;
+  return `${MONTHS[m - 1]} ${y}`;
+}
+
+function avg(arr) {
+  const valid = arr.filter(v => v != null && !isNaN(v) && v > 0);
+  if (!valid.length) return null;
+  return valid.reduce((a, b) => a + b, 0) / valid.length;
+}
+
+function fmt(val, dec = 0) {
+  if (val == null || isNaN(val)) return '—';
+  return val.toLocaleString('es-CL', { minimumFractionDigits: dec, maximumFractionDigits: dec });
+}
+
+function hexToRgba(hex, alpha) {
+  const r = parseInt(hex.slice(1, 3), 16);
+  const g = parseInt(hex.slice(3, 5), 16);
+  const b = parseInt(hex.slice(5, 7), 16);
+  return `rgba(${r},${g},${b},${alpha})`;
+}
+
+// ===== FILTER HELPERS =====
+function getFilteredData() {
+  const zona   = document.getElementById('selZona').value;
+  const region = document.getElementById('selRegion').value;
+  const eds    = document.getElementById('selEDS').value;
+  return data.filter(r => {
+    if (zona   && r.zona   !== zona)   return false;
+    if (region && r.region !== region) return false;
+    if (eds    && r.denominacion !== eds) return false;
+    return true;
+  });
+}
+
+function getActiveBrandsInData(rows) {
+  return Object.keys(BRAND_COLORS).filter(b =>
+    activeBrands.has(b) && rows.some(r => r.marca === b)
+  );
+}
+
+// ===== INIT =====
+function init() {
+  updatePeriodBadge();
+  populateFilters();
+  buildPills();
+  render();
+}
+
+function updatePeriodBadge() {
+  const periods = [...new Set(data.map(r => r.periodo).filter(Boolean))];
+  const latest = periods.sort().pop();
+  document.getElementById('periodBadge').textContent = latest ? parsePeriodo(latest) : '—';
+}
+
+// ===== POPULATE FILTERS =====
+function populateFilters() {
+  const zonas = [...new Set(data.map(r => r.zona))].sort();
+  const selZona = document.getElementById('selZona');
+  const curZona = selZona.value;
+  selZona.innerHTML = '<option value="">Todas</option>' +
+    zonas.map(z => `<option value="${z}"${z === curZona ? ' selected' : ''}>${z}</option>`).join('');
+  updateRegionFilter();
+}
+
+function updateRegionFilter() {
+  const zona = document.getElementById('selZona').value;
+  const selRegion = document.getElementById('selRegion');
+  const curRegion = selRegion.value;
+
+  const rows = zona ? data.filter(r => r.zona === zona) : data;
+  const regions = [...new Set(rows.map(r => r.region))].sort();
+
+  selRegion.innerHTML = '<option value="">Todas</option>' +
+    regions.map(r => `<option value="${r}"${r === curRegion ? ' selected' : ''}>${r}</option>`).join('');
+
+  if (curRegion && !regions.includes(curRegion)) selRegion.value = '';
+  updateEDSFilter();
+}
+
+function updateEDSFilter() {
+  const zona   = document.getElementById('selZona').value;
+  const region = document.getElementById('selRegion').value;
+  const selEDS = document.getElementById('selEDS');
+  const curEDS = selEDS.value;
+
+  let rows = data;
+  if (zona)   rows = rows.filter(r => r.zona   === zona);
+  if (region) rows = rows.filter(r => r.region === region);
+
+  const edsList = [...new Set(rows.map(r => r.denominacion))].sort();
+
+  selEDS.innerHTML = '<option value="">Todas</option>' +
+    edsList.map(e => `<option value="${e}"${e === curEDS ? ' selected' : ''}>${e}</option>`).join('');
+
+  if (curEDS && !edsList.includes(curEDS)) selEDS.value = '';
+}
+
+// ===== FILTER EVENTS =====
+function onZonaChange() {
+  document.getElementById('selRegion').value = '';
+  document.getElementById('selEDS').value = '';
+  updateRegionFilter();
+  render();
+}
+
+function onRegionChange() {
+  document.getElementById('selEDS').value = '';
+  updateEDSFilter();
+  render();
+}
+
+// ===== BRAND PILLS =====
+function buildPills() {
+  const brands = Object.keys(BRAND_COLORS);
+  document.getElementById('pillsRow').innerHTML = brands.map(b => {
+    const color = BRAND_COLORS[b];
+    const isActive = activeBrands.has(b);
+    return `<div class="pill ${isActive ? 'active' : 'inactive'}"
+         onclick="toggleBrand('${b}')"
+         style="background:${hexToRgba(color, 0.12)};border-color:${color};color:${color}">
+      <span class="pill-dot" style="background:${color}"></span>${b}
+    </div>`;
+  }).join('');
+}
+
+function toggleBrand(brand) {
+  if (activeBrands.has(brand)) {
+    if (activeBrands.size === 1) return;
+    activeBrands.delete(brand);
+  } else {
+    activeBrands.add(brand);
+  }
+  buildPills();
+  render();
+}
+
+// ===== RENDER =====
+function render() {
+  const filtered = getFilteredData();
+  const activeBrandsInData = getActiveBrandsInData(filtered);
+  renderKPIs(filtered, activeBrandsInData);
+  renderChart1(filtered, activeBrandsInData);
+  renderChart2();
+  renderChart3(filtered, activeBrandsInData);
+  renderChart4(filtered, activeBrandsInData);
+  renderTable(filtered, activeBrandsInData);
+}
+
+// ===== KPIs =====
+function renderKPIs(filtered, activeBrandsInData) {
+  const copecRows = filtered.filter(r => r.marca === 'COPEC' && r.precio > 0);
+  const compRows  = filtered.filter(r => r.marca !== 'COPEC' && activeBrands.has(r.marca) && r.precio > 0);
+
+  const countCopec = copecRows.length;
+  const avgCopec   = avg(copecRows.map(r => r.precio));
+  const avgComp    = avg(compRows.map(r => r.precio));
+  const diff       = (avgCopec != null && avgComp != null) ? avgCopec - avgComp : null;
+  const maxCopec   = copecRows.length ? Math.max(...copecRows.map(r => r.precio)) : null;
+  const minCopec   = copecRows.length ? Math.min(...copecRows.map(r => r.precio)) : null;
+
+  const sign = diff != null && diff > 0 ? '+' : '';
+  const diffColor = diff == null ? '' : diff > 0 ? 'positive' : 'negative';
+
+  const kpis = [
+    { label: 'EDS Copec',         value: countCopec,                                 suffix: ''     },
+    { label: 'Precio prom. Copec',value: avgCopec != null ? fmt(avgCopec, 1) : '—',  suffix: ' $/L' },
+    { label: 'Prom. competencia', value: avgComp  != null ? fmt(avgComp,  1) : '—',  suffix: ' $/L' },
+    { label: 'Diferencial Copec', value: diff != null ? sign + fmt(diff, 1) : '—',   suffix: ' $/L', colorClass: diffColor },
+    { label: 'Precio máx. Copec', value: maxCopec != null ? fmt(maxCopec, 0) : '—',  suffix: ' $/L' },
+    { label: 'Precio mín. Copec', value: minCopec != null ? fmt(minCopec, 0) : '—',  suffix: ' $/L' },
+  ];
+
+  document.getElementById('kpiGrid').innerHTML = kpis.map(k => `
+    <div class="kpi-card">
+      <div class="kpi-label">${k.label}</div>
+      <div class="kpi-value${k.colorClass ? ' ' + k.colorClass : ''}">${k.value}<span class="kpi-suffix">${k.suffix}</span></div>
+    </div>`).join('');
+}
+
+// ===== CHART 1: Precio por región =====
+function renderChart1(filtered, activeBrandsInData) {
+  const regions = [...new Set(filtered.map(r => r.region))].sort();
+
+  const datasets = activeBrandsInData.map(brand => {
+    const color = BRAND_COLORS[brand];
+    return {
+      label: brand,
+      data: regions.map(reg => avg(filtered.filter(r => r.region === reg && r.marca === brand && r.precio > 0).map(r => r.precio))),
+      backgroundColor: hexToRgba(color, 0.8),
+      borderColor: color,
+      borderWidth: 1,
+      borderRadius: 3,
+    };
+  });
+
+  document.getElementById('legendChart1').innerHTML = activeBrandsInData.map(b =>
+    `<div class="legend-item"><span class="legend-dot" style="background:${BRAND_COLORS[b]}"></span>${b}</div>`
+  ).join('');
+
+  if (charts.c1) charts.c1.destroy();
+  charts.c1 = new Chart(document.getElementById('chart1'), {
+    type: 'bar',
+    data: { labels: regions, datasets },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: {
+        y: { ticks: { font: { size: 10 }, callback: v => fmt(v, 0) }, grid: { color: '#E0DED8' } },
+        x: { ticks: { font: { size: 9 } }, grid: { display: false } }
+      }
+    }
+  });
+}
+
+// ===== CHART 2: PPMM Doughnut =====
+function renderChart2() {
+  const zona   = document.getElementById('selZona').value;
+  const region = document.getElementById('selRegion').value;
+
+  let scopeRows = data;
+  if (zona)   scopeRows = scopeRows.filter(r => r.zona   === zona);
+  if (region) scopeRows = scopeRows.filter(r => r.region === region);
+
+  const brandCounts = {};
+  let totalKnown = 0;
+  for (const brand of Object.keys(BRAND_COLORS)) {
+    const count = scopeRows.filter(r => r.marca === brand && r.precio > 0).length;
+    brandCounts[brand] = count;
+    totalKnown += count;
+  }
+
+  const isFiltered   = !!(zona || region);
+  const totalMercado = isFiltered ? totalKnown : TOTAL_MERCADO;
+  const sinLevantar  = isFiltered ? 0 : Math.max(0, TOTAL_MERCADO - totalKnown);
+
+  const brandKeys   = Object.keys(BRAND_COLORS);
+  const brandLabels = isFiltered ? brandKeys.filter(b => brandCounts[b] > 0) : brandKeys;
+
+  const labels = [...brandLabels, ...(sinLevantar > 0 ? ['Sin levantar'] : [])];
+  const values = [...brandLabels.map(b => brandCounts[b]), ...(sinLevantar > 0 ? [sinLevantar] : [])];
+  const colors = [...brandLabels.map(b => BRAND_COLORS[b]), ...(sinLevantar > 0 ? ['#E8E6DF'] : [])];
+  const total  = values.reduce((a, b) => a + b, 0);
+
+  document.getElementById('legendChart2').innerHTML = labels.map((l, i) => {
+    const pct = total > 0 ? ((values[i] / total) * 100).toFixed(1) : '0.0';
+    return `<div class="legend-item"><span class="legend-dot" style="background:${colors[i]}"></span>${l}: ${pct}%</div>`;
+  }).join('');
+
+  const subLabel = isFiltered
+    ? `Total ${region ? 'región' : 'zona'}: ${totalMercado} estaciones levantadas`
+    : `Total mercado: ${TOTAL_MERCADO}`;
+  document.getElementById('doughnutSub').textContent = subLabel;
+
+  if (charts.c2) charts.c2.destroy();
+  charts.c2 = new Chart(document.getElementById('chart2'), {
+    type: 'doughnut',
+    data: { labels, datasets: [{ data: values, backgroundColor: colors, borderWidth: 1, borderColor: '#fff' }] },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      cutout: '60%',
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            label: ctx => {
+              const v = ctx.parsed;
+              const pct = total > 0 ? ((v / total) * 100).toFixed(1) : '0';
+              return ` ${ctx.label}: ${v} (${pct}%)`;
+            }
+          }
+        }
+      }
+    }
+  });
+}
+
+// ===== CHART 3: Diferencial Copec vs competencia =====
+function renderChart3(filtered, activeBrandsInData) {
+  const competitors = activeBrandsInData.filter(b => b !== 'COPEC');
+  const card3 = document.getElementById('card3');
+
+  if (!competitors.length || !activeBrandsInData.includes('COPEC')) {
+    card3.style.display = 'none';
+    if (charts.c3) { charts.c3.destroy(); charts.c3 = null; }
+    return;
+  }
+  card3.style.display = '';
+
+  const regions = [...new Set(filtered.map(r => r.region))].sort();
+
+  const datasets = competitors.map(comp => {
+    const color = BRAND_COLORS[comp];
+    return {
+      label: `Copec vs ${comp}`,
+      data: regions.map(reg => {
+        const copecAvg = avg(filtered.filter(r => r.region === reg && r.marca === 'COPEC' && r.precio > 0).map(r => r.precio));
+        const compAvg  = avg(filtered.filter(r => r.region === reg && r.marca === comp    && r.precio > 0).map(r => r.precio));
+        return (copecAvg != null && compAvg != null) ? copecAvg - compAvg : null;
+      }),
+      backgroundColor: hexToRgba(color, 0.75),
+      borderColor: color,
+      borderWidth: 1,
+      borderRadius: 3,
+    };
+  });
+
+  if (charts.c3) charts.c3.destroy();
+  charts.c3 = new Chart(document.getElementById('chart3'), {
+    type: 'bar',
+    data: { labels: regions, datasets },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: { legend: { labels: { font: { size: 10 }, color: '#6B6B69' } } },
+      scales: {
+        y: {
+          ticks: { font: { size: 10 }, callback: v => (v > 0 ? '+' : '') + fmt(v, 0) },
+          grid: { color: '#E0DED8' }
+        },
+        x: { ticks: { font: { size: 9 } }, grid: { display: false } }
+      }
+    }
+  });
+}
+
+// ===== CHART 4: Precio por zona =====
+function renderChart4(filtered, activeBrandsInData) {
+  const zonas = ['Norte', 'Centro', 'Sur'].filter(z => filtered.some(r => r.zona === z));
+
+  const datasets = activeBrandsInData.map(brand => {
+    const color = BRAND_COLORS[brand];
+    return {
+      label: brand,
+      data: zonas.map(z => avg(filtered.filter(r => r.zona === z && r.marca === brand && r.precio > 0).map(r => r.precio))),
+      backgroundColor: hexToRgba(color, 0.8),
+      borderColor: color,
+      borderWidth: 1,
+      borderRadius: 3,
+    };
+  });
+
+  document.getElementById('legendChart4').innerHTML = activeBrandsInData.map(b =>
+    `<div class="legend-item"><span class="legend-dot" style="background:${BRAND_COLORS[b]}"></span>${b}</div>`
+  ).join('');
+
+  if (charts.c4) charts.c4.destroy();
+  charts.c4 = new Chart(document.getElementById('chart4'), {
+    type: 'bar',
+    data: { labels: zonas, datasets },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: {
+        y: { ticks: { font: { size: 10 }, callback: v => fmt(v, 0) }, grid: { color: '#E0DED8' } },
+        x: { ticks: { font: { size: 10 } }, grid: { display: false } }
+      }
+    }
+  });
+}
+
+// ===== TABLE =====
+function renderTable(filtered, activeBrandsInData) {
+  const rowMap = new Map();
+
+  filtered.forEach(r => {
+    if (!activeBrands.has(r.marca)) return;
+    const key = `${r.denominacion}|||${r.zona}|||${r.region}|||${r.comuna}`;
+    if (!rowMap.has(key)) {
+      rowMap.set(key, { denominacion: r.denominacion, zona: r.zona, region: r.region, comuna: r.comuna, periodo: r.periodo, prices: {} });
+    }
+    const row = rowMap.get(key);
+    if (!row.prices[r.marca]) row.prices[r.marca] = [];
+    if (r.precio > 0) row.prices[r.marca].push(r.precio);
+  });
+
+  const zonaOrder = { Norte: 0, Centro: 1, Sur: 2 };
+  const rows = [...rowMap.values()].sort((a, b) => {
+    const zo = (zonaOrder[a.zona] ?? 9) - (zonaOrder[b.zona] ?? 9);
+    if (zo !== 0) return zo;
+    if (a.region < b.region) return -1;
+    if (a.region > b.region) return 1;
+    return a.denominacion.localeCompare(b.denominacion);
+  });
+
+  const competitors = activeBrandsInData.filter(b => b !== 'COPEC');
+  const colSpan = 5 + activeBrandsInData.length + competitors.length;
+
+  document.getElementById('tableHead').innerHTML = '<tr>' +
+    ['EDS', 'Zona', 'Región', 'Comuna', 'Período', ...activeBrandsInData, ...competitors.map(c => `vs ${c} ($/L)`)].map(h => `<th>${h}</th>`).join('') +
+    '</tr>';
+
+  if (!rows.length) {
+    document.getElementById('tableBody').innerHTML =
+      `<tr><td colspan="${colSpan}" class="no-data">Sin datos para los filtros seleccionados</td></tr>`;
+    return;
+  }
+
+  document.getElementById('tableBody').innerHTML = rows.map(row => {
+    const copecAvg = row.prices['COPEC'] ? avg(row.prices['COPEC']) : null;
+
+    const baseCells = [
+      `<td style="font-weight:500">${row.denominacion}</td>`,
+      `<td>${row.zona}</td>`,
+      `<td>${row.region}</td>`,
+      `<td>${row.comuna}</td>`,
+      `<td>${parsePeriodo(row.periodo)}</td>`,
+    ];
+
+    const brandCells = activeBrandsInData.map(brand => {
+      const p = row.prices[brand] ? avg(row.prices[brand]) : null;
+      return `<td>${p != null ? fmt(p, 1) : '—'}</td>`;
+    });
+
+    const diffCells = competitors.map(comp => {
+      const compAvg = row.prices[comp] ? avg(row.prices[comp]) : null;
+      if (copecAvg == null || compAvg == null) return `<td><span class="chip chip-gray">—</span></td>`;
+      const diff = copecAvg - compAvg;
+      const cls  = diff > 0 ? 'chip-green' : 'chip-red';
+      return `<td><span class="chip ${cls}">${diff > 0 ? '+' : ''}${fmt(diff, 1)}</span></td>`;
+    });
+
+    return `<tr>${[...baseCells, ...brandCells, ...diffCells].join('')}</tr>`;
+  }).join('');
+}
+
+// ===== EXCEL LOADING =====
+function handleFile(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    try {
+      const wb = XLSX.read(e.target.result, { type: 'array' });
+      const ws = wb.Sheets['BD Final'];
+      if (!ws) { alert('No se encontró la hoja "BD Final" en el archivo.'); return; }
+
+      const jsonRows = XLSX.utils.sheet_to_json(ws, { defval: '' });
+      const parsed = jsonRows
+        .map(r => ({
+          zona:         String(r['Zona']                        || ''),
+          region:       String(r['Region nombre']              || ''),
+          regionN:      Number(r['Region n°'])                 || 0,
+          marca:        String(r['Marca']                       || ''),
+          comuna:       String(r['COMUNA']                     || ''),
+          denominacion: String(r['Denominación']               || ''),
+          precio:       Number(r['Precio Tótem (C/IVA) ($/L)'])|| 0,
+          periodo:      r['Periodo'] ? String(r['Periodo'])     : '202606',
+        }))
+        .filter(r => r.precio > 0);
+
+      data = parsed;
+      document.getElementById('uploadInfo').textContent = `${file.name} — ${parsed.length} registros`;
+      updatePeriodBadge();
+      populateFilters();
+      buildPills();
+      render();
+    } catch (err) {
+      alert('Error leyendo el archivo: ' + err.message);
+    }
+  };
+  reader.readAsArrayBuffer(file);
+  event.target.value = '';
+}
+
+// ===== START =====
+init();
+</script>
+</body>
+</html>
